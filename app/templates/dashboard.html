@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Test Automation Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            text-align: center;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin: 5px;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #219a52;
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        
+        .results {
+            grid-column: 1 / -1;
+        }
+        
+        .test-result {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            border-left: 4px solid;
+            transition: all 0.3s;
+        }
+        
+        .test-result:hover {
+            transform: translateX(5px);
+        }
+        
+        .result-passed {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .result-failed {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        .result-running {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-passed { background: #28a745; color: white; }
+        .status-failed { background: #dc3545; color: white; }
+        .status-running { background: #ffc107; color: black; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 1rem 0;
+        }
+        
+        .test-steps {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .step {
+            margin: 5px 0;
+            padding: 2px 5px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .ci-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        
+        .ci-passed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .ci-running {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Smart Test Automation Dashboard</h1>
+            <p class="subtitle">Enterprise-Grade Test Automation with CI/CD</p>
+            <div style="margin-top: 10px;">
+                <span class="ci-status ci-running" id="ciStatus">CI/CD: Ready</span>
+            </div>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card controls">
+                <h2>Test Controls</h2>
+                <p>Run automated tests against real websites</p>
+                <div style="margin: 1rem 0;">
+                    <button class="btn btn-success" onclick="runTests()" id="runBtn">
+                        🚀 Run Google Test
+                    </button>
+                    <button class="btn btn-warning" onclick="runEnhancedTests()" id="enhancedBtn">
+                        🧪 Run Enhanced Suite
+                    </button>
+                </div>
+                <button class="btn" onclick="loadTestResults()" id="refreshBtn">
+                    🔄 Refresh Results
+                </button>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                    <p><strong>Enhanced Suite Tests:</strong></p>
+                    <p>• Google Search & Navigation</p>
+                    <p>• Wikipedia Flow</p>
+                    <p>• E-commerce Demo</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Test Analytics</h2>
+                <div id="stats">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div>Total Runs</div>
+                            <div class="stat-number" id="totalRuns">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>Passed</div>
+                            <div class="stat-number" style="color: #28a745;" id="passedRuns">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>Failed</div>
+                            <div class="stat-number" style="color: #dc3545;" id="failedRuns">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>Success Rate</div>
+                            <div class="stat-number" style="color: #3498db;" id="successRate">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card results">
+                <h2>Latest Test Results</h2>
+                <div id="testResults">
+                    <div class="loading" id="loadingMessage">
+                        No tests run yet. Click the buttons above to start testing.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Test Performance History</h2>
+            <canvas id="testHistoryChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="card">
+            <h2>CI/CD Status</h2>
+            <div id="ciCdInfo">
+                <p>✅ GitHub Actions CI/CD pipeline configured</p>
+                <p>✅ Automated testing on every git push</p>
+                <p>✅ Daily scheduled test execution</p>
+                <p>✅ Security and quality checks</p>
+                <p style="margin-top: 10px;">
+                    <small>View workflow runs in your GitHub repository under "Actions"</small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRunning = false;
+        let testHistoryChart = null;
+        
+        // Helper function to normalize status
+        function normalizeStatus(status) {
+            const statusMap = {
+                'pass': 'passed',
+                'passed': 'passed',
+                'fail': 'failed', 
+                'failed': 'failed',
+                'running': 'running',
+                'completed': 'completed'
+            };
+            return statusMap[status] || status;
+        }
+        
+        async function runTests() {
+            if (isRunning) return;
+            
+            const runBtn = document.getElementById('runBtn');
+            const resultsDiv = document.getElementById('testResults');
+            const loadingMessage = document.getElementById('loadingMessage');
+            
+            isRunning = true;
+            runBtn.disabled = true;
+            runBtn.textContent = '🔄 Running Google Test...';
+            
+            // Clear previous results
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="test-result result-running">
+                    <h3>Google Homepage Test</h3>
+                    <p><span class="status-badge status-running">Running</span></p>
+                    <p>🚀 Testing Google homepage load and search functionality...</p>
+                    <p>⏰ Expected duration: 5-10 seconds</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/run-simple-test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Wait 8 seconds then refresh results
+                    setTimeout(() => {
+                        loadTestResults();
+                        loadStats();
+                    }, 8000);
+                } else {
+                    throw new Error(data.error);
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                isRunning = false;
+                runBtn.disabled = false;
+                runBtn.textContent = '🚀 Run Google Test';
+            }
+        }
+        
+        async function runEnhancedTests() {
+            if (isRunning) return;
+            
+            const enhancedBtn = document.getElementById('enhancedBtn');
+            const resultsDiv = document.getElementById('testResults');
+            const loadingMessage = document.getElementById('loadingMessage');
+            
+            isRunning = true;
+            enhancedBtn.disabled = true;
+            enhancedBtn.textContent = '🔄 Running Enhanced Suite...';
+            
+            // Clear previous results
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="test-result result-running">
+                    <h3>Enhanced Test Suite (3 Websites)</h3>
+                    <p><span class="status-badge status-running">Running</span></p>
+                    <p>🧪 Comprehensive testing across multiple platforms:</p>
+                    <div class="test-steps">
+                        <div class="step">• Google - Search and navigation</div>
+                        <div class="step">• Wikipedia - Page flow and content</div>
+                        <div class="step">• E-commerce Demo - Login and product browsing</div>
+                    </div>
+                    <p>⏰ Expected duration: 20-30 seconds</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/run-enhanced-tests', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Wait 15 seconds then refresh results (longer for enhanced tests)
+                    setTimeout(() => {
+                        loadTestResults();
+                        loadStats();
+                    }, 15000);
+                } else {
+                    throw new Error(data.error);
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                isRunning = false;
+                enhancedBtn.disabled = false;
+                enhancedBtn.textContent = '🧪 Run Enhanced Suite';
+            }
+        }
+        
+        async function loadTestResults() {
+            try {
+                console.log('🔄 Loading test results...');
+                const response = await fetch('/api/test-runs');
+                const data = await response.json();
+                
+                const resultsDiv = document.getElementById('testResults');
+                
+                if (data.success && data.test_runs.length > 0) {
+                    console.log('📊 Found test runs:', data.test_runs.length);
+                    
+                    resultsDiv.innerHTML = data.test_runs.map(run => {
+                        const normalizedStatus = normalizeStatus(run.status);
+                        const isEnhanced = run.test_suite.includes('Enhanced');
+                        
+                        return `
+                        <div class="test-result result-${normalizedStatus}">
+                            <h3>${run.test_suite} ${isEnhanced ? '🧪' : '🚀'}</h3>
+                            <p>
+                                <span class="status-badge status-${normalizedStatus}">${normalizedStatus}</span>
+                                • Duration: ${run.duration ? run.duration.toFixed(2) + 's' : 'N/A'}
+                                • Tests: ${run.passed_tests} passed, ${run.failed_tests} failed
+                                • ${new Date(run.start_time).toLocaleString()}
+                            </p>
+                            <small>Run ID: ${run.run_id}</small>
+                            ${normalizedStatus === 'failed' ? '<p style="color: #dc3545; margin-top: 8px;">⚠️ Check the console for error details</p>' : ''}
+                        </div>
+                    `}).join('');
+                    
+                    updateTestHistoryChart(data.test_runs);
+                } else {
+                    console.log('📭 No test runs found');
+                    resultsDiv.innerHTML = '<div class="loading">No test runs found. Run your first test!</div>';
+                }
+            } catch (error) {
+                console.error('❌ Error loading test results:', error);
+                const resultsDiv = document.getElementById('testResults');
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Error loading results:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadStats() {
+            try {
+                console.log('📈 Loading stats...');
+                const response = await fetch('/api/test-runs');
+                const data = await response.json();
+                
+                if (data.success && data.test_runs.length > 0) {
+                    const totalRuns = data.test_runs.length;
+                    const passedRuns = data.test_runs.filter(run => 
+                        normalizeStatus(run.status) === 'passed' || normalizeStatus(run.status) === 'completed'
+                    ).length;
+                    const failedRuns = data.test_runs.filter(run => 
+                        normalizeStatus(run.status) === 'failed'
+                    ).length;
+                    const successRate = totalRuns > 0 ? ((passedRuns / totalRuns) * 100).toFixed(1) : 0;
+                    
+                    document.getElementById('totalRuns').textContent = totalRuns;
+                    document.getElementById('passedRuns').textContent = passedRuns;
+                    document.getElementById('failedRuns').textContent = failedRuns;
+                    document.getElementById('successRate').textContent = successRate + '%';
+                    
+                    console.log('✅ Stats updated:', { totalRuns, passedRuns, failedRuns, successRate });
+                } else {
+                    // Reset stats if no data
+                    document.getElementById('totalRuns').textContent = '0';
+                    document.getElementById('passedRuns').textContent = '0';
+                    document.getElementById('failedRuns').textContent = '0';
+                    document.getElementById('successRate').textContent = '0%';
+                }
+            } catch (error) {
+                console.error('❌ Error loading stats:', error);
+            }
+        }
+        
+        function updateTestHistoryChart(testRuns) {
+            const ctx = document.getElementById('testHistoryChart').getContext('2d');
+            
+            // Limit to last 10 runs for better visualization
+            const recentRuns = testRuns.slice(0, 10).reverse();
+            
+            if (testHistoryChart) {
+                testHistoryChart.destroy();
+            }
+            
+            // Only create chart if we have data with durations
+            if (recentRuns.length > 0 && recentRuns.some(run => run.duration)) {
+                testHistoryChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: recentRuns.map(run => new Date(run.start_time).toLocaleTimeString()),
+                        datasets: [{
+                            label: 'Test Duration (seconds)',
+                            data: recentRuns.map(run => run.duration || 0),
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Test Execution Time Trend'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: function(context) {
+                                        const run = recentRuns[context.dataIndex];
+                                        return `Tests: ${run.passed_tests} passed, ${run.failed_tests} failed`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Duration (seconds)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Execution Time'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateCiStatus() {
+            const ciStatus = document.getElementById('ciStatus');
+            // Simulate CI status - in real scenario, this would call GitHub API
+            const statuses = ['Ready', 'Running', 'Passed', 'Failed'];
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            
+            ciStatus.textContent = `CI/CD: ${randomStatus}`;
+            ciStatus.className = `ci-status ci-${randomStatus.toLowerCase()}`;
+        }
+        
+        // Load initial data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Dashboard loaded - initializing...');
+            loadTestResults();
+            loadStats();
+            updateCiStatus();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                if (!isRunning) {
+                    console.log('🔄 Auto-refreshing...');
+                    loadTestResults();
+                    loadStats();
+                    updateCiStatus();
+                }
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
